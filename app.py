@@ -108,11 +108,3 @@ def root():
         "docs": "/docs"
     }
 
-# Swagger UI metadata (optional, shows OpenAPI schema)
-@app.get("/docs", include_in_schema=False)
-def custom_docs():
-    return get_openapi(
-        title="TDS Virtual TA API",
-        version="1.0.0",
-        routes=app.routes
-    )
