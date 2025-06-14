@@ -1,12 +1,12 @@
-# 🤖 TDS Virtual TA — IITM BS Data Science Project (Jan 2025)
+# 🤖 TDS Virtual TA Project 1
 
 This is a **Virtual Teaching Assistant** for the **Tools in Data Science (TDS)** course in the IIT Madras Online BS Data Science program. It can answer student questions using **Retrieval-Augmented Generation (RAG)** with course content and Discourse forum posts as knowledge sources.
 
-> ✅ Built for the **Virtual TA** project submission (Jan–Apr 2025 cohort)
+> Built for the **Virtual TA** project submission 
 
 ---
 
-## 🚀 Project Goals
+## Project Goals
 
 Create a working API that:
 
@@ -39,7 +39,7 @@ Create a working API that:
 
 ---
 
-## 🧪 Example API Call
+## Example API Call
 
 ```bash
 curl "https://your-api-url.com/api/" \
@@ -48,3 +48,7 @@ curl "https://your-api-url.com/api/" \
     "question": "Should I use gpt-4o-mini which AI proxy supports, or gpt3.5 turbo?",
     "image": "<base64-string>"
   }'
+```
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
