@@ -8,7 +8,7 @@ This is a **Virtual Teaching Assistant** for the **Tools in Data Science (TDS)**
 
  **Live URL**: [https://tds-va-project-1.onrender.com](https://tds-va-project-1.onrender.com)
 
-#🧪 Try It Out
+# 🧪 Try It Out
 You can use:
 
 [Hoppscotch](https://hoppscotch.io/) or Postman to send requests to https://tds-va-project-1.onrender.com/ask
