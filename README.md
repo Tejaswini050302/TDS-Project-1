@@ -6,6 +6,10 @@ This is a **Virtual Teaching Assistant** for the **Tools in Data Science (TDS)**
 
 ---
 
+ **Live URL**: [https://tds-va-project-1.onrender.com](https://tds-va-project-1.onrender.com)
+
+---
+
 ## Project Goals
 
 Create a working API that:
