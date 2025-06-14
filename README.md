@@ -23,34 +23,34 @@ Create a working API that:
 
 ---
 
-## Components & Workflow
+## 🧩 Components & Workflow
 
-1. **Scrape Data**  
-   - `website_downloader_full.py`: downloads the course content into `.md` files
-   - `discourse_downloader_single.py`: logs into IITM Discourse and saves post JSON files
+### 1. 🕸 Scrape Data  
+- `website_downloader_full.py`: Downloads the TDS course content into `.md` files from the course site.  
+- `discourse_downloader_single.py`: Logs into the IITM Discourse forum and saves each topic post as individual JSON files.
 
-2. **Chunk Data**  
-   - `prepare_course_chunks.py`: splits course Markdown into chunks
-   - `prepare_discourse_chunks.py`: splits Discourse JSON into chunks
-   - `combine_chunks.py`: merges all into one file
+### 2. ✂️ Chunk Data  
+- `prepare_course_chunks.py`: Splits the Markdown course content into smaller chunks for embedding.  
+- `prepare_discourse_chunks.py`: Splits Discourse forum data into clean, usable text chunks.  
+- `combine_chunks.py`: Merges the course and forum chunks into a single dataset.
 
-3. **Embed & Index**  
-   - `generate_embeddings.py`: creates embeddings using `text-embedding-3-small` via AI Proxy
-   - `index_to_typesense.py`: pushes data + vectors into local TypeSense server (`localhost:8001`)
+### 3. 🧠 Embed & Index  
+- `generate_embeddings.py`: Creates vector embeddings using `text-embedding-3-small` via the AI Proxy.  
+- `index_to_typesense.py`: Uploads the chunks and embeddings to a TypeSense vector database hosted on a cluster or `localhost:8001`.
 
-4. **Serve API**  
-   - `main.py`: FastAPI backend for answering questions via `/api/` endpoint
+### 4. ⚙️ Serve API  
+- `app.py`: FastAPI backend exposing a `/ask` endpoint that performs search + GPT-4o-mini answer generation using context from the database.
 
 ---
 
-## Example API Call
+## 📡 Example API Call
 
 ```bash
-curl "https://your-api-url.com/api/" \
+curl -X POST "https://tds-va-project-1.onrender.com/ask" \
   -H "Content-Type: application/json" \
   -d '{
-    "question": "Should I use gpt-4o-mini which AI proxy supports, or gpt3.5 turbo?",
-    "image": "<base64-string>"
+    "question": "Should I use gpt-4o-mini which AI proxy supports, or gpt-3.5-turbo?",
+    "image": null
   }'
 ```
 ## License
