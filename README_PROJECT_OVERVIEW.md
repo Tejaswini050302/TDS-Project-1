@@ -32,17 +32,17 @@ Create a working API that:
 ## 🗂️ Project Structure
 
 ### tds/
-- app.py # Main FastAPI application
-- .env # API keys and config (not pushed to GitHub)
-- embedded_chunks.json # Combined course + forum data with embeddings
-- index_to_typesense.py # Indexes embedded chunks into TypeSense
-- generate_embeddings.py # Generates embeddings using AI Proxy
-- prepare_course_chunks.py # Parses Markdown course pages into chunks
-- prepare_discourse_chunks.py# Parses forum JSON files into chunks
-- discourse/ # Folder with scraped Discourse JSON files
-- tds_pages_md/ # Folder with Markdown pages from TDS site
-- requirements.txt # Python dependencies
-- README.md # This file
+- app.py   # Main FastAPI application
+- .env   # API keys and config (not pushed to GitHub)
+- embedded_chunks.json   # Combined course + forum data with embeddings
+- index_to_typesense.py   # Indexes embedded chunks into TypeSense
+- generate_embeddings.py   # Generates embeddings using AI Proxy
+- prepare_course_chunks.py   # Parses Markdown course pages into chunks
+- prepare_discourse_chunks.py   # Parses forum JSON files into chunks
+- discourse/   # Folder with scraped Discourse JSON files
+- tds_pages_md/    # Folder with Markdown pages from TDS site
+- requirements.txt    # Python dependencies
+- README_PROJECT_OVERVIEW.md    # This file
 
 ---
 
