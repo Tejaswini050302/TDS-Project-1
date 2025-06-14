@@ -1,17 +1,19 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List, Optional
 import typesense
 import requests
 import os
 from dotenv import load_dotenv
-from fastapi.openapi.utils import get_openapi
+import traceback
 
+# Load .env variables
 load_dotenv()
 
+# Initialize FastAPI app
 app = FastAPI()
 
-# TypeSense configuration
+# TypeSense client
 client = typesense.Client({
     "api_key": os.getenv("TYPESENSE_API_KEY"),
     "nodes": [{
@@ -22,12 +24,12 @@ client = typesense.Client({
     "connection_timeout_seconds": 5
 })
 
-# Request body model
+# Request format
 class QueryRequest(BaseModel):
     question: str
-    image: Optional[str] = None
+    image: Optional[str] = None  # Can be extended later
 
-# Search TypeSense for relevant chunks
+# Search TypeSense
 def search_typesense(query_text: str, top_k: int = 5):
     results = client.collections["tds_chunks"].documents.search({
         "q": query_text,
@@ -37,40 +39,61 @@ def search_typesense(query_text: str, top_k: int = 5):
     })
     return results["hits"]
 
-# Ask AI Proxy GPT model
+# Ask GPT via AI Proxy
 def generate_answer(question: str, contexts: List[str]):
     context_block = "\n\n".join(contexts)
     system_msg = "You are a helpful assistant for the IIT Madras TDS course. Use only the context provided."
+
     payload = {
-        "model": "gpt-4o-mini",
+        "model": os.getenv("OPENAI_MODEL"),  # gpt-4o-mini
         "messages": [
             {"role": "system", "content": system_msg},
             {"role": "user", "content": f"Question: {question}\n\nContext:\n{context_block}"}
         ]
     }
+
     headers = {
-        "Authorization": f"Bearer {os.getenv('AIPROXY_TOKEN')}",
+        "Authorization": f"Bearer {os.getenv('OPENAI_API_KEY')}",
         "Content-Type": "application/json"
     }
+
     response = requests.post(
-        "https://aiproxy.sanand.workers.dev/openai/v1/chat/completions",
+        os.getenv("OPENAI_API_BASE") + "v1/chat/completions",
         json=payload,
         headers=headers
     )
+    response.raise_for_status()
     return response.json()["choices"][0]["message"]["content"]
 
-# Main API route to answer questions
+# Main endpoint
 @app.post("/ask")
 async def ask_question(query: QueryRequest):
-    hits = search_typesense(query.question)
-    contexts = [hit["document"]["text"] for hit in hits]
-    sources = [hit["document"]["source"] for hit in hits]
-    answer = generate_answer(query.question, contexts)
-    return {
-        "question": query.question,
-        "answer": answer,
-        "sources": sources
-    }
+    try:
+        hits = search_typesense(query.question)
+
+        if not hits:
+            return {
+                "question": query.question,
+                "answer": "Sorry, I couldn't find any relevant information.",
+                "sources": []
+            }
+
+        contexts = [hit["document"]["text"] for hit in hits]
+        sources = [hit["document"]["source"] for hit in hits]
+        answer = generate_answer(query.question, contexts)
+
+        return {
+            "question": query.question,
+            "answer": answer,
+            "sources": sources
+        }
+
+    except Exception as e:
+        return {
+            "error": str(e),
+            "trace": traceback.format_exc()
+        }
+
 
 # Home route to verify deployment
 @app.get("/")
