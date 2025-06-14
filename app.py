@@ -93,3 +93,9 @@ async def ask_question(query: QueryRequest):
             "error": str(e),
             "trace": traceback.format_exc()
         }
+
+@app.get("/")
+async def root():
+    return {
+        "message": "Welcome to the TDS Virtual TA API. Use the POST /ask endpoint to ask a question."
+    }
