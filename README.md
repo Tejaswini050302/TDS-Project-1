@@ -1,4 +1,4 @@
-# 🤖 TDS Virtual TA Project 1
+# TDS Virtual TA Project 1
 
 This is a **Virtual Teaching Assistant** for the **Tools in Data Science (TDS)** course in the IIT Madras Online BS Data Science program. It can answer student questions using **Retrieval-Augmented Generation (RAG)** with course content and Discourse forum posts as knowledge sources.
 
@@ -19,7 +19,7 @@ Create a working API that:
 
 ---
 
-## 🧱 Components & Workflow
+## Components & Workflow
 
 1. **Scrape Data**  
    - `website_downloader_full.py`: downloads the course content into `.md` files
