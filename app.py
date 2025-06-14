@@ -99,7 +99,7 @@ async def ask_question(query: QueryRequest):
 @app.get("/")
 def root():
     return {
-        "message": "✅ Welcome to the TDS Virtual TA API!",
+        "message": "Welcome to the TDS Virtual TA API!",
         "usage": "Send a POST request to /ask with your question. Optional: include a base64 image.",
         "example": {
             "question": "What is the use of hybrid RAG in this course?",
