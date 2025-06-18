@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Request, Query
 from pydantic import BaseModel
 from typing import List, Optional
 import typesense
@@ -6,23 +6,11 @@ import requests
 import os
 from dotenv import load_dotenv
 
-# Load environment variables
 load_dotenv()
 
-# Initialize FastAPI app
 app = FastAPI()
 
-# Root endpoint
-@app.get("/")
-def read_root():
-    return {"message": "Welcome to the TDS Virtual TA API. Use GET or POST /api/ to ask questions."}
-
-# Define request model for POST
-class QueryRequest(BaseModel):
-    question: str
-    image: Optional[str] = None
-
-# Setup TypeSense client
+# Initialize Typesense client
 client = typesense.Client({
     "api_key": os.getenv("TYPESENSE_API_KEY"),
     "nodes": [{
@@ -33,7 +21,10 @@ client = typesense.Client({
     "connection_timeout_seconds": 5
 })
 
-# Search TypeSense
+class QueryRequest(BaseModel):
+    question: str
+    image: Optional[str] = None
+
 def search_typesense(query_text: str, top_k: int = 5):
     results = client.collections["tds_chunks"].documents.search({
         "q": query_text,
@@ -43,7 +34,6 @@ def search_typesense(query_text: str, top_k: int = 5):
     })
     return results["hits"]
 
-# Query GPT via AI Proxy
 def generate_answer(question: str, contexts: List[str]):
     context_block = "\n\n".join(contexts)
     system_msg = "You are a helpful assistant for the IIT Madras TDS course. Use only the context provided."
@@ -65,26 +55,26 @@ def generate_answer(question: str, contexts: List[str]):
     )
     return response.json()["choices"][0]["message"]["content"]
 
-# ✅ POST endpoint
-@app.post("/api/")
+@app.post("/ask")
 async def ask_post(query: QueryRequest):
     hits = search_typesense(query.question)
     contexts = [hit["document"]["text"] for hit in hits]
     sources = [hit["document"]["source"] for hit in hits]
     answer = generate_answer(query.question, contexts)
     return {
+        "question": query.question,
         "answer": answer,
-        "links": [{"url": src, "text": "Relevant link"} for src in sources]
+        "sources": sources
     }
 
-# ✅ GET endpoint
-@app.get("/api/")
-async def ask_get(question: str = Query(...)):
+@app.get("/")
+async def ask_get(question: str = Query(..., description="Student's question")):
     hits = search_typesense(question)
     contexts = [hit["document"]["text"] for hit in hits]
     sources = [hit["document"]["source"] for hit in hits]
     answer = generate_answer(question, contexts)
     return {
+        "question": question,
         "answer": answer,
-        "links": [{"url": src, "text": "Relevant link"} for src in sources]
+        "sources": sources
     }
