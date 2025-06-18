@@ -1,8 +1,7 @@
-from fastapi import FastAPI, Request, Form
-from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
+from fastapi import FastAPI, Request, Query
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import List, Optional
 import typesense
 import requests
 import os
@@ -11,25 +10,22 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = FastAPI()
-templates = Jinja2Templates(directory="templates")
 
-# Typesense client config
+# TypeSense client
 client = typesense.Client({
     "api_key": os.getenv("TYPESENSE_API_KEY"),
     "nodes": [{
         "host": os.getenv("TYPESENSE_HOST"),
         "port": int(os.getenv("TYPESENSE_PORT")),
-        "protocol": os.getenv("TYPESENSE_PROTOCOL")
+        "protocol": os.getenv("TYPESENSE_PROTOCOL"),
     }],
     "connection_timeout_seconds": 5
 })
 
-# Pydantic model for POST API
 class QueryRequest(BaseModel):
     question: str
     image: Optional[str] = None
 
-# Search function
 def search_typesense(query_text: str, top_k: int = 5):
     results = client.collections["tds_chunks"].documents.search({
         "q": query_text,
@@ -39,7 +35,6 @@ def search_typesense(query_text: str, top_k: int = 5):
     })
     return results["hits"]
 
-# AI Proxy API
 def generate_answer(question: str, contexts: List[str]):
     context_block = "\n\n".join(contexts)
     system_msg = "You are a helpful assistant for the IIT Madras TDS course. Use only the context provided."
@@ -51,47 +46,36 @@ def generate_answer(question: str, contexts: List[str]):
         ]
     }
     headers = {
-        "Authorization": f"Bearer {os.getenv('AIPROXY_TOKEN')}",
+        "Authorization": f"Bearer {os.getenv('OPENAI_API_KEY')}",
         "Content-Type": "application/json"
     }
-    response = requests.post(
-        "https://aiproxy.sanand.workers.dev/openai/v1/chat/completions",
+    resp = requests.post(
+        os.getenv("OPENAI_API_BASE") + "v1/chat/completions",
         json=payload,
         headers=headers
     )
-    return response.json()["choices"][0]["message"]["content"]
+    resp.raise_for_status()
+    return resp.json()["choices"][0]["message"]["content"]
 
-# Home page form (GET)
-@app.get("/", response_class=HTMLResponse)
-async def get_form(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+def get_links(hits):
+    return [{"url": hit["document"].get("source", "#"), "text": "Related content"} for hit in hits]
 
-# Handle form submit (POST)
-@app.post("/", response_class=HTMLResponse)
-async def handle_form(request: Request, question: str = Form(...)):
-    hits = search_typesense(question)
-    contexts = [hit["document"]["text"] for hit in hits]
-    sources = [hit["document"]["source"] for hit in hits]
-    answer = generate_answer(question, contexts)
-
-    links = [{"url": src, "text": "View source"} for src in sources]
-
-    return templates.TemplateResponse("index.html", {
-        "request": request,
-        "answer": answer,
-        "links": links
-    })
-
-# JSON API endpoint
-@app.post("/", response_class=HTMLResponse)
 @app.post("/api/")
-async def ask_json(query: QueryRequest):
-    hits = search_typesense(query.question)
-    contexts = [hit["document"]["text"] for hit in hits]
-    sources = [hit["document"]["source"] for hit in hits]
-    answer = generate_answer(query.question, contexts)
-    links = [{"url": src, "text": "View source"} for src in sources]
-    return {
-        "answer": answer,
-        "links": links
-    }
+async def ask_post(req: QueryRequest):
+    hits = search_typesense(req.question)
+    contexts = [h["document"]["text"] for h in hits]
+    links = get_links(hits)
+    answer = generate_answer(req.question, contexts)
+    return {"answer": answer, "links": links}
+
+@app.get("/api/")
+async def ask_get(question: str = Query(...)):
+    hits = search_typesense(question)
+    contexts = [h["document"]["text"] for h in hits]
+    links = get_links(hits)
+    answer = generate_answer(question, contexts)
+    return {"answer": answer, "links": links}
+
+@app.get("/")
+def root():
+    return {"message": "Welcome to the TDS Virtual TA API. Use GET or POST /api/ to ask questions."}
