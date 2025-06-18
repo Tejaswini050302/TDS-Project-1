@@ -66,7 +66,7 @@ def generate_answer(question: str, contexts: List[str]):
     return response.json()["choices"][0]["message"]["content"]
 
 # Main endpoint
-@app.post("/ask")
+@app.post("/api")
 async def ask_question(query: QueryRequest):
     try:
         hits = search_typesense(query.question)
