@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>TDS Virtual TA</title>
+</head>
+<body>
+  <h1>Ask the TDS Virtual TA</h1>
+  <form method="post">
+    <label for="question">Your Question:</label><br>
+    <textarea name="question" rows="4" cols="50" required></textarea><br><br>
+    <input type="submit" value="Ask">
+  </form>
+
+  {% if answer %}
+    <h2>Answer:</h2>
+    <p>{{ answer }}</p>
+
+    {% if links %}
+      <h3>Sources:</h3>
+      <ul>
+        {% for link in links %}
+          <li><a href="{{ link.url }}" target="_blank">{{ link.text }}</a></li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  {% endif %}
+</body>
+</html>
