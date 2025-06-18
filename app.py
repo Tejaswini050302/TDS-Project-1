@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from pydantic import BaseModel
 from typing import List, Optional
 import typesense
@@ -10,7 +10,12 @@ load_dotenv()
 
 app = FastAPI()
 
-# TypeSense configuration
+# Root route – this ensures your base URL works!
+@app.get("/")
+def home():
+    return {"message": "Welcome to the TDS Virtual TA API. Use POST /api/ with your question."}
+
+# TypeSense client setup
 client = typesense.Client({
     "api_key": os.getenv("TYPESENSE_API_KEY"),
     "nodes": [{
@@ -26,13 +31,6 @@ class QueryRequest(BaseModel):
     question: str
     image: Optional[str] = None
 
-# GET / route - for homepage or ping
-@app.get("/")
-def root():
-    return {
-        "message": "✅ TDS Virtual TA API is live. Send POST requests to /api/"
-    }
-
 # Search in TypeSense
 def search_typesense(query_text: str, top_k: int = 5):
     results = client.collections["tds_chunks"].documents.search({
@@ -43,7 +41,7 @@ def search_typesense(query_text: str, top_k: int = 5):
     })
     return results["hits"]
 
-# Call AI Proxy
+# Generate answer using AI Proxy
 def generate_answer(question: str, contexts: List[str]):
     context_block = "\n\n".join(contexts)
     system_msg = "You are a helpful assistant for the IIT Madras TDS course. Use only the context provided."
@@ -65,8 +63,8 @@ def generate_answer(question: str, contexts: List[str]):
     )
     return response.json()["choices"][0]["message"]["content"]
 
-# POST /api
-@app.post("/api")
+# Main API route
+@app.post("/api/")
 async def ask_question(query: QueryRequest):
     hits = search_typesense(query.question)
     contexts = [hit["document"]["text"] for hit in hits]
@@ -74,5 +72,5 @@ async def ask_question(query: QueryRequest):
     answer = generate_answer(query.question, contexts)
     return {
         "answer": answer,
-        "links": [{"url": src, "text": "Relevant reference"} for src in sources]
+        "links": [{"url": src, "text": "Relevant link"} for src in sources]
     }
