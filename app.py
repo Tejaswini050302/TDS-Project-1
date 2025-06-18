@@ -1,6 +1,8 @@
-from fastapi import FastAPI, Request, Query
+from fastapi import FastAPI, Request, Form
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import Optional, List
 import typesense
 import requests
 import os
@@ -9,8 +11,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = FastAPI()
+templates = Jinja2Templates(directory="templates")
 
-# Initialize Typesense client
+# Typesense client config
 client = typesense.Client({
     "api_key": os.getenv("TYPESENSE_API_KEY"),
     "nodes": [{
@@ -21,10 +24,12 @@ client = typesense.Client({
     "connection_timeout_seconds": 5
 })
 
+# Pydantic model for POST API
 class QueryRequest(BaseModel):
     question: str
     image: Optional[str] = None
 
+# Search function
 def search_typesense(query_text: str, top_k: int = 5):
     results = client.collections["tds_chunks"].documents.search({
         "q": query_text,
@@ -34,6 +39,7 @@ def search_typesense(query_text: str, top_k: int = 5):
     })
     return results["hits"]
 
+# AI Proxy API
 def generate_answer(question: str, contexts: List[str]):
     context_block = "\n\n".join(contexts)
     system_msg = "You are a helpful assistant for the IIT Madras TDS course. Use only the context provided."
@@ -55,26 +61,37 @@ def generate_answer(question: str, contexts: List[str]):
     )
     return response.json()["choices"][0]["message"]["content"]
 
-@app.post("/ask")
-async def ask_post(query: QueryRequest):
-    hits = search_typesense(query.question)
-    contexts = [hit["document"]["text"] for hit in hits]
-    sources = [hit["document"]["source"] for hit in hits]
-    answer = generate_answer(query.question, contexts)
-    return {
-        "question": query.question,
-        "answer": answer,
-        "sources": sources
-    }
+# Home page form (GET)
+@app.get("/", response_class=HTMLResponse)
+async def get_form(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
 
-@app.get("/")
-async def ask_get(question: str = Query(..., description="Student's question")):
+# Handle form submit (POST)
+@app.post("/", response_class=HTMLResponse)
+async def handle_form(request: Request, question: str = Form(...)):
     hits = search_typesense(question)
     contexts = [hit["document"]["text"] for hit in hits]
     sources = [hit["document"]["source"] for hit in hits]
     answer = generate_answer(question, contexts)
-    return {
-        "question": question,
+
+    links = [{"url": src, "text": "View source"} for src in sources]
+
+    return templates.TemplateResponse("index.html", {
+        "request": request,
         "answer": answer,
-        "sources": sources
+        "links": links
+    })
+
+# JSON API endpoint
+@app.post("/", response_class=HTMLResponse)
+@app.post("/api/")
+async def ask_json(query: QueryRequest):
+    hits = search_typesense(query.question)
+    contexts = [hit["document"]["text"] for hit in hits]
+    sources = [hit["document"]["source"] for hit in hits]
+    answer = generate_answer(query.question, contexts)
+    links = [{"url": src, "text": "View source"} for src in sources]
+    return {
+        "answer": answer,
+        "links": links
     }
