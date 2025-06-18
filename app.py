@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Query
 from pydantic import BaseModel
 from typing import List, Optional
 import typesense
@@ -10,10 +10,9 @@ load_dotenv()
 
 app = FastAPI()
 
-# Root route – this ensures your base URL works!
 @app.get("/")
 def home():
-    return {"message": "Welcome to the TDS Virtual TA API. Use POST /api/ with your question."}
+    return {"message": "Welcome to the TDS Virtual TA API. Use GET or POST /api/ with your question."}
 
 # TypeSense client setup
 client = typesense.Client({
@@ -26,12 +25,10 @@ client = typesense.Client({
     "connection_timeout_seconds": 5
 })
 
-# Request model
 class QueryRequest(BaseModel):
     question: str
     image: Optional[str] = None
 
-# Search in TypeSense
 def search_typesense(query_text: str, top_k: int = 5):
     results = client.collections["tds_chunks"].documents.search({
         "q": query_text,
@@ -41,7 +38,6 @@ def search_typesense(query_text: str, top_k: int = 5):
     })
     return results["hits"]
 
-# Generate answer using AI Proxy
 def generate_answer(question: str, contexts: List[str]):
     context_block = "\n\n".join(contexts)
     system_msg = "You are a helpful assistant for the IIT Madras TDS course. Use only the context provided."
@@ -63,13 +59,25 @@ def generate_answer(question: str, contexts: List[str]):
     )
     return response.json()["choices"][0]["message"]["content"]
 
-# Main API route
+# POST endpoint
 @app.post("/api/")
-async def ask_question(query: QueryRequest):
+async def ask_question_post(query: QueryRequest):
     hits = search_typesense(query.question)
     contexts = [hit["document"]["text"] for hit in hits]
     sources = [hit["document"]["source"] for hit in hits]
     answer = generate_answer(query.question, contexts)
+    return {
+        "answer": answer,
+        "links": [{"url": src, "text": "Relevant link"} for src in sources]
+    }
+
+# GET endpoint (same logic, accepts question as query param)
+@app.get("/api/")
+async def ask_question_get(question: str = Query(...)):
+    hits = search_typesense(question)
+    contexts = [hit["document"]["text"] for hit in hits]
+    sources = [hit["document"]["source"] for hit in hits]
+    answer = generate_answer(question, contexts)
     return {
         "answer": answer,
         "links": [{"url": src, "text": "Relevant link"} for src in sources]
