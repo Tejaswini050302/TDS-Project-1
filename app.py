@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from pydantic import BaseModel
 from typing import List, Optional
 import typesense
@@ -10,7 +10,6 @@ import traceback
 # Load .env variables
 load_dotenv()
 
-# Initialize FastAPI app
 app = FastAPI()
 
 # TypeSense client
@@ -27,9 +26,9 @@ client = typesense.Client({
 # Request format
 class QueryRequest(BaseModel):
     question: str
-    image: Optional[str] = None  # Can be extended later
+    image: Optional[str] = None
 
-# Search TypeSense
+# Search in TypeSense
 def search_typesense(query_text: str, top_k: int = 5):
     results = client.collections["tds_chunks"].documents.search({
         "q": query_text,
@@ -39,7 +38,7 @@ def search_typesense(query_text: str, top_k: int = 5):
     })
     return results["hits"]
 
-# Ask GPT via AI Proxy
+# Ask AI Proxy
 def generate_answer(question: str, contexts: List[str]):
     context_block = "\n\n".join(contexts)
     system_msg = "You are a helpful assistant for the IIT Madras TDS course. Use only the context provided."
@@ -65,27 +64,24 @@ def generate_answer(question: str, contexts: List[str]):
     response.raise_for_status()
     return response.json()["choices"][0]["message"]["content"]
 
-# Main endpoint
-@app.post("/api")
+# Common handler
 async def ask_question(query: QueryRequest):
     try:
         hits = search_typesense(query.question)
-
         if not hits:
             return {
                 "question": query.question,
                 "answer": "Sorry, I couldn't find any relevant information.",
-                "sources": []
+                "links": []
             }
 
         contexts = [hit["document"]["text"] for hit in hits]
-        sources = [hit["document"]["source"] for hit in hits]
+        sources = [{"url": hit["document"]["source"], "text": hit["document"]["source"]} for hit in hits]
         answer = generate_answer(query.question, contexts)
 
         return {
-            "question": query.question,
             "answer": answer,
-            "sources": sources
+            "links": sources
         }
 
     except Exception as e:
@@ -93,3 +89,26 @@ async def ask_question(query: QueryRequest):
             "error": str(e),
             "trace": traceback.format_exc()
         }
+
+# POST endpoint (original)
+@app.post("/ask")
+async def ask_post(query: QueryRequest):
+    return await ask_question(query)
+
+# POST /api (required)
+@app.post("/api/")
+async def api_post(query: QueryRequest):
+    return await ask_question(query)
+
+# GET /api (for browser testing)
+@app.get("/api/")
+async def api_get(question: str = Query(...)):
+    fake_query = QueryRequest(question=question)
+    return await ask_question(fake_query)
+
+# Root welcome
+@app.get("/")
+async def root():
+    return {
+        "message": "Welcome to the TDS Virtual TA API. Use GET or POST /api/ to ask questions."
+    }
