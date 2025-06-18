@@ -6,12 +6,12 @@ This is a **Virtual Teaching Assistant** for the **Tools in Data Science (TDS)**
 
 ---
 
- **Live URL**: [https://tds-va-project-1.onrender.com](https://tds-va-project-1.onrender.com)
+ **Live URL**: [https://tds-va-project-1.onrender.com](https://tds-va-project-1.onrender.com/api/)
 
 # 🧪 Try It Out
 You can use:
 
-[Hoppscotch](https://hoppscotch.io/) or Postman to send requests to https://tds-va-project-1.onrender.com/ask
+[Hoppscotch](https://hoppscotch.io/) or Postman to send POST requests to https://tds-va-project-1.onrender.com/api/
 
 ---
 
